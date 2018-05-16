@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>7.1</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.1.1" />
+    <PackageReference Include="Humanizer" Version="2.2.0" />
+    <PackageReference Include="ini-parser" Version="2.5.2" />
+    <PackageReference Include="JetBrains.Annotations" Version="11.1.0" />
+    <PackageReference Include="YouTrackSharp" Version="3.4.1" />
+  </ItemGroup>
+</Project>
