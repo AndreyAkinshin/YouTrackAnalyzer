@@ -44,7 +44,7 @@ namespace YouTrackAnalyzer
                 foreach (var issue in despHotIssues)
                 {
                     var id = issue.Id;
-                    var url = config.HostUrl + "/issue/" + id;
+                    var url = config.HostUrl + "issue/" + id;
                     var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
                     var comments = "comment".ToQuantity(issue.Comments.Count);
                     textBuilder.AppendLine(
