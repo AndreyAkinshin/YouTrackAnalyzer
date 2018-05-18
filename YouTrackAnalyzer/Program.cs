@@ -15,18 +15,28 @@ namespace YouTrackAnalyzer
         private const string SearchFiler = "#Unresolved Assignee: Unassigned order by: updated";
         private const int CommentThreshold = 50;
         private static readonly TimeSpan TimeThreshold = TimeSpan.FromDays(7);
-        private static Config myConfig;
+        private static Config ourConfig;
 
         public static async Task Main(string[] args)
         {
-            await Task.Run(() => Parser.Default.ParseArguments<Config>(args)
-                .WithParsed(c => { myConfig = c; })
-                .WithNotParsed(HandleParseError));
-
             try
             {
+                await Task.Run(() => Parser.Default.ParseArguments<Config>(args)
+                    .WithParsed(c => { ourConfig = c; })
+                    .WithNotParsed(HandleParseError));
+
                 var textBuilder = new TextBuilder();
-                var connection = new UsernamePasswordConnection(myConfig.HostUrl, myConfig.Login, myConfig.Password);
+                if (string.IsNullOrEmpty(ourConfig.Login) && string.IsNullOrEmpty(ourConfig.Token))
+                {
+                    Console.WriteLine("Either login+password are required or authorisation token.");
+                    return;
+                }
+
+                Connection connection = null;
+                if (!string.IsNullOrEmpty(ourConfig.Token))
+                    connection = new BearerTokenConnection(ourConfig.HostUrl, ourConfig.Token);
+                if (!string.IsNullOrEmpty(ourConfig.Login))
+                    connection = new UsernamePasswordConnection(ourConfig.HostUrl, ourConfig.Login, ourConfig.Password);
 
                 var sw = Stopwatch.StartNew();
 
@@ -42,7 +52,7 @@ namespace YouTrackAnalyzer
                 foreach (var issue in despHotIssues)
                 {
                     var id = issue.Id;
-                    var url = myConfig.HostUrl + "issue/" + id;
+                    var url = ourConfig.HostUrl + "issue/" + id;
 
                     var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
                     var comments = "comment".ToQuantity(issue.Comments.Count);
