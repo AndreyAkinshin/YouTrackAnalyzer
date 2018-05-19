@@ -1,48 +1,24 @@
-﻿using IniParser;
-using IniParser.Model;
-using JetBrains.Annotations;
+﻿using CommandLine;
 
 namespace YouTrackAnalyzer
 {
     public class Config
     {
-        public readonly string HostUrl = "https://youtrack.jetbrains.com/";
+        [Option('u', "user", HelpText = "Login.")]
+        public string Login { get; set; }
 
-        private static readonly FileIniDataParser Parser = new FileIniDataParser();
+        [Option('p', "password", HelpText = "Password.")]
+        public string Password { get; set; }
+        
+        [Option('t', "token", HelpText = "Auth token. https://www.jetbrains.com/help/youtrack/standalone/Log-in-to-YouTrack.html")]
+        public string Token { get; set; }
+        
+        public readonly string HostUrl = "https://youtrack.jetbrains.com/";
 
         public const string MainConfigFileName = "config.ini";
 
         private const string CredentialsSectionKey = "Credentials";
-        private const string LoginKey = "Login";
-        private const string PasswordKey = "Password";
 
         private const string Unknown = "?";
-
-        private readonly IniData data;
-
-        [PublicAPI] public string Login => data[CredentialsSectionKey][LoginKey];
-        [PublicAPI] public string Password => data[CredentialsSectionKey][PasswordKey];
-
-
-        [PublicAPI]
-        public void Deconstruct(out string login, out string password)
-        {
-            login = Login;
-            password = Password;
-        }
-
-        private Config(IniData data) => this.data = data;
-
-        public static Config CreateBlank()
-        {
-            var data = new IniData();
-            data[CredentialsSectionKey][LoginKey] = Unknown;
-            data[CredentialsSectionKey][PasswordKey] = Unknown;
-            return new Config(data);
-        }
-
-        public static Config ReadFile(string filePath) => new Config(Parser.ReadFile(filePath));
-
-        public void WriteFile(string filePath) => Parser.WriteFile(filePath, data);
     }
 }

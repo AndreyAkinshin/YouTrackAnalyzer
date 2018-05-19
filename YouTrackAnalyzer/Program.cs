@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using CommandLine;
 using Humanizer;
 using YouTrackSharp;
 
@@ -13,22 +15,28 @@ namespace YouTrackAnalyzer
         private const string SearchFiler = "#Unresolved Assignee: Unassigned order by: updated";
         private const int CommentThreshold = 50;
         private static readonly TimeSpan TimeThreshold = TimeSpan.FromDays(7);
+        private static Config ourConfig;
 
-        public static async Task Main()
+        public static async Task Main(string[] args)
         {
-            if (!File.Exists(Config.MainConfigFileName))
-            {
-                Config.CreateBlank().WriteFile(Config.MainConfigFileName);
-                Console.WriteLine(Config.MainConfigFileName + " is created. Please, fill it.");
-                return;
-            }
-
-            var config = Config.ReadFile(Config.MainConfigFileName);
-
             try
             {
+                await Task.Run(() => Parser.Default.ParseArguments<Config>(args)
+                    .WithParsed(c => { ourConfig = c; })
+                    .WithNotParsed(HandleParseError));
+
                 var textBuilder = new TextBuilder();
-                var connection = new UsernamePasswordConnection(config.HostUrl, config.Login, config.Password);
+                if (string.IsNullOrEmpty(ourConfig.Login) && string.IsNullOrEmpty(ourConfig.Token))
+                {
+                    Console.WriteLine("Either login+password are required or authorisation token.");
+                    return;
+                }
+
+                Connection connection = null;
+                if (!string.IsNullOrEmpty(ourConfig.Token))
+                    connection = new BearerTokenConnection(ourConfig.HostUrl, ourConfig.Token);
+                if (!string.IsNullOrEmpty(ourConfig.Login))
+                    connection = new UsernamePasswordConnection(ourConfig.HostUrl, ourConfig.Login, ourConfig.Password);
 
                 var sw = Stopwatch.StartNew();
 
@@ -44,7 +52,8 @@ namespace YouTrackAnalyzer
                 foreach (var issue in despHotIssues)
                 {
                     var id = issue.Id;
-                    var url = config.HostUrl + "issue/" + id;
+                    var url = ourConfig.HostUrl + "issue/" + id;
+
                     var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
                     var comments = "comment".ToQuantity(issue.Comments.Count);
                     textBuilder.AppendLine(
@@ -69,6 +78,14 @@ namespace YouTrackAnalyzer
                 Console.WriteLine("Can't establish a connection to YouTrack");
                 Console.WriteLine(e.Demystify());
                 Console.ResetColor();
+            }
+        }
+
+        private static void HandleParseError(IEnumerable<Error> errs)
+        {
+            foreach (var error in errs)
+            {
+                Console.WriteLine(error);
             }
         }
     }
