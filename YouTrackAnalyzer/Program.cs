@@ -96,7 +96,7 @@ namespace YouTrackAnalyzer
                 var comments = "comment".ToQuantity(issue.Comments.Count);
                 sb.AppendLine(
                     $"{id} {title} / {comments}",
-                    $"<a href=\"{url}\">{id}</a> {title} / <b>{comments}</b>");
+                    $"<a target=\"_blank\" href=\"{url}\">{id}</a> {title} / <b>{comments}</b>");
             }
 
             return sb;
