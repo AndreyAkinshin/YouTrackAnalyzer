@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using CommandLine;
 using Humanizer;
@@ -55,7 +56,7 @@ namespace YouTrackAnalyzer
                 var dexpTopHotIssues = dexpHotIssues.Take(5);
 
                 var dexpHotAgregated = Agregate(dexpHotIssues);
-                var dexpTopAgregated = Agregate(dexpTopHotIssues);
+                var dexpTopAgregated = AgregateTop(dexpTopHotIssues);
                 sw.Stop();
                 textBuilder.AppendHeader("DEXP HOT (" + dexpHotIssues.Count + ")");
                 topHotTextBuilder.AppendHeader("Top 5 of " + dexpHotIssues.Count + " hot issues");
@@ -65,7 +66,7 @@ namespace YouTrackAnalyzer
                 textBuilder.AppendKeyValue("Time", $"{sw.Elapsed.TotalSeconds:0.00} sec");
                 textBuilder.AppendKeyValue("dexpIssues.Count", dexpIssues.Count.ToString());
                 textBuilder.AppendKeyValue("despHotIssues.Count", dexpHotIssues.Count.ToString());
-                topHotTextBuilder.AppendLine(dexpTopAgregated.ToPlainText(), dexpTopAgregated.ToHtml());
+                topHotTextBuilder.AppendLine(dexpTopAgregated, dexpTopAgregated);
 
                 File.WriteAllText("report.html", textBuilder.ToHtml());
                 File.WriteAllText("report.txt", textBuilder.ToPlainText());
@@ -92,7 +93,7 @@ namespace YouTrackAnalyzer
                 var id = issue.Id;
                 var url = ourConfig.HostUrl + "issue/" + id;
 
-                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;").Replace("“", "'");
+                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
                 var comments = "comment".ToQuantity(issue.Comments.Count);
                 sb.AppendLine(
                     $"{id} {title} / {comments}",
@@ -100,6 +101,22 @@ namespace YouTrackAnalyzer
             }
 
             return sb;
+        }
+        
+        private static string AgregateTop(IEnumerable<Issue> dexpHotIssues)
+        {
+            var sb = new StringBuilder();
+            foreach (var issue in dexpHotIssues)
+            {
+                var id = issue.Id;
+                var url = ourConfig.HostUrl + "issue/" + id;
+
+                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;").Replace("“", "'");
+                var comments = "comment".ToQuantity(issue.Comments.Count);
+                sb.AppendLine($"<{url}|{id}> {title} / <b>{comments}</b>");
+            }
+
+            return sb.ToString();
         }
 
         private static void HandleParseError(IEnumerable<Error> errs)
