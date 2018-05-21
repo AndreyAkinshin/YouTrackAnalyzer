@@ -9,6 +9,7 @@
     <PackageReference Include="CommandLineParser" Version="2.2.1" />
     <PackageReference Include="Humanizer" Version="2.2.0" />
     <PackageReference Include="JetBrains.Annotations" Version="11.1.0" />
+    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.10" />
     <PackageReference Include="YouTrackSharp" Version="3.4.1" />
   </ItemGroup>
 </Project>

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 using Humanizer;
+using JetBrains.TeamCity.ServiceMessages.Write;
+using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using YouTrackSharp;
 using YouTrackSharp.Issues;
 
@@ -68,7 +70,10 @@ namespace YouTrackAnalyzer
                 File.WriteAllText("report.html", textBuilder.ToHtml());
                 File.WriteAllText("report.txt", textBuilder.ToPlainText());
                 //File.WriteAllText("top-report.txt", topHotTextBuilder.ToPlainText());
-                Console.WriteLine($"##teamcity[setParameter name='env.short_report' value='{topHotTextBuilder.ToPlainText()}']");
+                using (var writer = new TeamCityServiceMessages().CreateWriter(Console.WriteLine))
+                {
+                    writer.WriteBuildParameter("env.short_report", topHotTextBuilder.ToPlainText());
+                }
             }
             catch (UnauthorizedConnectionException e)
             {
