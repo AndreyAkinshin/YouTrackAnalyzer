@@ -92,7 +92,7 @@ namespace YouTrackAnalyzer
                 var id = issue.Id;
                 var url = ourConfig.HostUrl + "issue/" + id;
 
-                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;").Replace("“", "\"");
+                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;").Replace("“", "'");
                 var comments = "comment".ToQuantity(issue.Comments.Count);
                 sb.AppendLine(
                     $"{id} {title} / {comments}",
