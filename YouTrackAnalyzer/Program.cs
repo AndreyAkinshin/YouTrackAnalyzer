@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CommandLine;
 using Humanizer;
 using YouTrackSharp;
+using YouTrackSharp.Issues;
 
 namespace YouTrackAnalyzer
 {
@@ -43,34 +44,31 @@ namespace YouTrackAnalyzer
                 var issuesService = connection.CreateIssuesService();
                 var dexpIssues = await issuesService.GetIssuesInProject(
                     "DEXP", SearchFiler, take: 2000, updatedAfter: DateTime.Now - TimeThreshold);
-                var despHotIssues = dexpIssues
+                var dexpHotIssues = dexpIssues
                     .OrderByDescending(it => it.Comments.Count)
                     .Where(it => it.Comments.Count > CommentThreshold)
                     .ToList();
 
-                textBuilder.AppendHeader("DEXP HOT (" + despHotIssues.Count + ")");
-                foreach (var issue in despHotIssues)
-                {
-                    var id = issue.Id;
-                    var url = ourConfig.HostUrl + "issue/" + id;
+                var topHotTextBuilder = new TextBuilder();
+                var dexpTopHotIssues = dexpHotIssues.Take(5);
 
-                    var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
-                    var comments = "comment".ToQuantity(issue.Comments.Count);
-                    textBuilder.AppendLine(
-                        $"{id} {title} / {comments}",
-                        $"<a href=\"{url}\">{id}</a> {title} / <b>{comments}</b>");
-                }
-
+                var dexpHotAgregated = Agregate(dexpHotIssues);
+                var dexpTopAgregated = Agregate(dexpTopHotIssues);
                 sw.Stop();
+                textBuilder.AppendHeader("DEXP HOT (" + dexpHotIssues.Count + ")");
+                topHotTextBuilder.AppendHeader("Top 5 of " + dexpHotIssues.Count + " hot issues");
 
+                textBuilder.AppendLine(dexpHotAgregated.ToPlainText(), dexpHotAgregated.ToHtml());
                 textBuilder.AppendHeader("Statistics");
                 textBuilder.AppendKeyValue("Time", $"{sw.Elapsed.TotalSeconds:0.00} sec");
                 textBuilder.AppendKeyValue("dexpIssues.Count", dexpIssues.Count.ToString());
-                textBuilder.AppendKeyValue("despHotIssues.Count", despHotIssues.Count.ToString());
+                textBuilder.AppendKeyValue("despHotIssues.Count", dexpHotIssues.Count.ToString());
+                topHotTextBuilder.AppendLine(dexpTopAgregated.ToPlainText(), dexpTopAgregated.ToHtml());
 
                 File.WriteAllText("report.html", textBuilder.ToHtml());
                 File.WriteAllText("report.txt", textBuilder.ToPlainText());
-                Console.WriteLine(textBuilder.ToPlainText());
+                //File.WriteAllText("top-report.txt", topHotTextBuilder.ToPlainText());
+                Console.WriteLine($"##teamcity[setParameter name='short_report' value='{topHotTextBuilder.ToPlainText()}']");
             }
             catch (UnauthorizedConnectionException e)
             {
@@ -79,6 +77,24 @@ namespace YouTrackAnalyzer
                 Console.WriteLine(e.Demystify());
                 Console.ResetColor();
             }
+        }
+
+        private static TextBuilder Agregate(IEnumerable<Issue> dexpHotIssues)
+        {
+            var sb = new TextBuilder();
+            foreach (var issue in dexpHotIssues)
+            {
+                var id = issue.Id;
+                var url = ourConfig.HostUrl + "issue/" + id;
+
+                var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;");
+                var comments = "comment".ToQuantity(issue.Comments.Count);
+                sb.AppendLine(
+                    $"{id} {title} / {comments}",
+                    $"<a href=\"{url}\">{id}</a> {title} / <b>{comments}</b>");
+            }
+
+            return sb;
         }
 
         private static void HandleParseError(IEnumerable<Error> errs)
