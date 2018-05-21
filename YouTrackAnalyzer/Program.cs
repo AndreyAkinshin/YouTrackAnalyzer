@@ -113,7 +113,7 @@ namespace YouTrackAnalyzer
 
                 var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;").Replace("“", "'");
                 var comments = "comment".ToQuantity(issue.Comments.Count);
-                sb.AppendLine($"<{url}|{id}> {title} / <b>{comments}</b>");
+                sb.AppendLine($"<{url}|{id}> {title} / {comments}");
             }
 
             return sb.ToString();
