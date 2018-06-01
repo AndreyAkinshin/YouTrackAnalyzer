@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CommandLine;
 using Humanizer;
@@ -112,7 +113,8 @@ namespace YouTrackAnalyzer
                 var url = ourConfig.HostUrl + "issue/" + id;
 
                 var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;")
-                  .Replace("“", "'").Replace("”", "'").Replace("'", "'").Replace("'", "'");
+                  .Replace("“", "'").Replace("”", "'");
+                title = Regex.Replace(title, @"[^\u0000-\u007F]+", string.Empty);
                 var comments = "comment".ToQuantity(issue.Comments.Count);
                 sb.AppendLine($"<{url}|{id}> {title} / {comments}");
             }
