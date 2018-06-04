@@ -13,12 +13,9 @@ namespace YouTrackAnalyzer
         [Option('t', "token", HelpText = "Auth token. https://www.jetbrains.com/help/youtrack/standalone/Log-in-to-YouTrack.html")]
         public string Token { get; set; }
         
+        [Option('c', "count", Default = 50, HelpText = "Amount of comments threshold.")]
+        public int CommentThreshold { get; set; }
+        
         public readonly string HostUrl = "https://youtrack.jetbrains.com/";
-
-        public const string MainConfigFileName = "config.ini";
-
-        private const string CredentialsSectionKey = "Credentials";
-
-        private const string Unknown = "?";
     }
 }
