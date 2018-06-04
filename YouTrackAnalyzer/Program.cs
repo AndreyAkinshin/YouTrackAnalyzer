@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CommandLine;
 using Humanizer;
-using JetBrains.TeamCity.ServiceMessages.Write;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using YouTrackSharp;
 using YouTrackSharp.Issues;
@@ -18,7 +17,6 @@ namespace YouTrackAnalyzer
     public static class Program
     {
         private const string SearchFiler = "#Unresolved Assignee: Unassigned order by: updated";
-        private const int CommentThreshold = 50;
         private static readonly TimeSpan TimeThreshold = TimeSpan.FromDays(7);
         private static Config ourConfig;
 
@@ -43,6 +41,8 @@ namespace YouTrackAnalyzer
                 if (!string.IsNullOrEmpty(ourConfig.Login))
                     connection = new UsernamePasswordConnection(ourConfig.HostUrl, ourConfig.Login, ourConfig.Password);
 
+                int commentThreshold = ourConfig.CommentThreshold;
+
                 var sw = Stopwatch.StartNew();
 
                 var issuesService = connection.CreateIssuesService();
@@ -50,7 +50,7 @@ namespace YouTrackAnalyzer
                     "DEXP", SearchFiler, take: 2000, updatedAfter: DateTime.Now - TimeThreshold);
                 var dexpHotIssues = dexpIssues
                     .OrderByDescending(it => it.Comments.Count)
-                    .Where(it => it.Comments.Count > CommentThreshold)
+                    .Where(it => it.Comments.Count > commentThreshold)
                     .ToList();
 
                 var topHotTextBuilder = new TextBuilder();
@@ -60,7 +60,8 @@ namespace YouTrackAnalyzer
                 var dexpTopAgregated = AgregateTop(dexpTopHotIssues);
                 sw.Stop();
                 textBuilder.AppendHeader("DEXP HOT (" + dexpHotIssues.Count + ")");
-                topHotTextBuilder.AppendHeader("Top 5 of " + dexpHotIssues.Count + " hot issues");
+                var maxCount = dexpHotIssues.Count >= 5 ? 5 : dexpHotIssues.Count;
+                topHotTextBuilder.AppendHeader($"Top {maxCount} of {dexpHotIssues.Count} hot issues");
 
                 textBuilder.AppendLine(dexpHotAgregated.ToPlainText(), dexpHotAgregated.ToHtml());
                 textBuilder.AppendHeader("Statistics");
