@@ -116,7 +116,7 @@ namespace YouTrackAnalyzer
 
                 var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;")
                   .Replace("“", "'").Replace("”", "'").Replace("\"", "'").Replace("\"", "'")
-                  ;
+                  .Replace("\'", String.Empty);
                 title = HttpUtility.JavaScriptStringEncode(title);
                 title = Regex.Replace(title, @"[^\u0000-\u007F]+", string.Empty);
                 var comments = "comment".ToQuantity(issue.Comments.Count);
