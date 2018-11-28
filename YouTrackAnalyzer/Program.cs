@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using CommandLine;
 using Humanizer;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
@@ -115,7 +116,8 @@ namespace YouTrackAnalyzer
 
                 var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;")
                   .Replace("“", "'").Replace("”", "'").Replace("\"", "'").Replace("\"", "'")
-                  .Replace("\'", "'");
+                  ;
+                title = HttpUtility.JavaScriptStringEncode(title);
                 title = Regex.Replace(title, @"[^\u0000-\u007F]+", string.Empty);
                 var comments = "comment".ToQuantity(issue.Comments.Count);
                 sb.AppendLine($"<{url}|{id}> {title} / {comments}");
