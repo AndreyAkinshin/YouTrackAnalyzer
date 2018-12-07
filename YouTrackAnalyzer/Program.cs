@@ -48,7 +48,7 @@ namespace YouTrackAnalyzer
 
                 var issuesService = connection.CreateIssuesService();
                 var dexpIssues = await issuesService.GetIssuesInProject(
-                    "DEXP", SearchFiler, take: 2000, updatedAfter: DateTime.Now - TimeThreshold);
+                    "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", take: 2000, updatedAfter: DateTime.Now - TimeThreshold);
                 var dexpHotIssues = dexpIssues
                     .OrderByDescending(it => it.Comments.Count)
                     .Where(it => it.Comments.Count > commentThreshold)
