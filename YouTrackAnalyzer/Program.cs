@@ -28,28 +28,33 @@ namespace YouTrackAnalyzer
                 await Task.Run(() => Parser.Default.ParseArguments<Config>(args)
                     .WithParsed(c => { ourConfig = c; })
                     .WithNotParsed(HandleParseError));
+                
+                if (ourConfig == null)
+                    return;
 
                 var textBuilder = new TextBuilder();
-                if (string.IsNullOrEmpty(ourConfig.Login) && string.IsNullOrEmpty(ourConfig.Token))
-                {
-                    Console.WriteLine("Either login+password are required or authorisation token.");
-                    return;
-                }
-
-                Connection connection = null;
-                if (!string.IsNullOrEmpty(ourConfig.Token))
-                    connection = new BearerTokenConnection(ourConfig.HostUrl, ourConfig.Token);
-                if (!string.IsNullOrEmpty(ourConfig.Login))
-                    connection = new UsernamePasswordConnection(ourConfig.HostUrl, ourConfig.Login, ourConfig.Password);
-
-                int commentThreshold = ourConfig.CommentThreshold;
+                var connection = new BearerTokenConnection(ourConfig.HostUrl, ourConfig.Token);
+                var commentThreshold = ourConfig.CommentThreshold;
 
                 var sw = Stopwatch.StartNew();
+                
+                var issuesService = connection.CreateIssuesService(); 
+                var list = new List<Issue>();
+                for (int i = 0; i < 20; i++)
+                {
+                    try
+                    {
+                        var dexpIssues = await issuesService.GetIssuesInProject(
+                            "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", skip: i*100,take: 100, updatedAfter: DateTime.Now - TimeThreshold);
+                        list.AddRange(dexpIssues);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Error.WriteLine(e);
+                    }
+                }
 
-                var issuesService = connection.CreateIssuesService();
-                var dexpIssues = await issuesService.GetIssuesInProject(
-                    "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", take: 2000, updatedAfter: DateTime.Now - TimeThreshold);
-                var dexpHotIssues = dexpIssues
+                var dexpHotIssues = list
                     .OrderByDescending(it => it.Comments.Count)
                     .Where(it => it.Comments.Count > commentThreshold)
                     .ToList();
@@ -57,19 +62,19 @@ namespace YouTrackAnalyzer
                 var topHotTextBuilder = new TextBuilder();
                 var dexpTopHotIssues = dexpHotIssues.Take(5);
 
-                var dexpHotAgregated = Agregate(dexpHotIssues);
-                var dexpTopAgregated = AgregateTop(dexpTopHotIssues);
+                var dexpHotAggregated = Aggregate(dexpHotIssues);
+                var dexpTopAggregated = AggregateTop(dexpTopHotIssues);
                 sw.Stop();
                 textBuilder.AppendHeader("DEXP HOT (" + dexpHotIssues.Count + ")");
                 var maxCount = dexpHotIssues.Count >= 5 ? 5 : dexpHotIssues.Count;
                 topHotTextBuilder.AppendHeader($"Top {maxCount} of {dexpHotIssues.Count} hot issues");
 
-                textBuilder.AppendLine(dexpHotAgregated.ToPlainText(), dexpHotAgregated.ToHtml());
+                textBuilder.AppendLine(dexpHotAggregated.ToPlainText(), dexpHotAggregated.ToHtml());
                 textBuilder.AppendHeader("Statistics");
                 textBuilder.AppendKeyValue("Time", $"{sw.Elapsed.TotalSeconds:0.00} sec");
-                textBuilder.AppendKeyValue("dexpIssues.Count", dexpIssues.Count.ToString());
-                textBuilder.AppendKeyValue("despHotIssues.Count", dexpHotIssues.Count.ToString());
-                topHotTextBuilder.AppendLine(dexpTopAgregated, dexpTopAgregated);
+                textBuilder.AppendKeyValue("dexpIssues.Count", list.Count.ToString());
+                textBuilder.AppendKeyValue("dexpHotIssues.Count", dexpHotIssues.Count.ToString());
+                topHotTextBuilder.AppendLine(dexpTopAggregated, dexpTopAggregated);
 
                 File.WriteAllText("report.html", textBuilder.ToHtml());
                 File.WriteAllText("report.txt", textBuilder.ToPlainText());
@@ -88,7 +93,7 @@ namespace YouTrackAnalyzer
             }
         }
 
-        private static TextBuilder Agregate(IEnumerable<Issue> dexpHotIssues)
+        private static TextBuilder Aggregate(IEnumerable<Issue> dexpHotIssues)
         {
             var sb = new TextBuilder();
             foreach (var issue in dexpHotIssues)
@@ -106,7 +111,7 @@ namespace YouTrackAnalyzer
             return sb;
         }
         
-        private static string AgregateTop(IEnumerable<Issue> dexpHotIssues)
+        private static string AggregateTop(IEnumerable<Issue> dexpHotIssues)
         {
             var sb = new StringBuilder();
             foreach (var issue in dexpHotIssues)
@@ -131,7 +136,7 @@ namespace YouTrackAnalyzer
         {
             foreach (var error in errs)
             {
-                Console.WriteLine(error);
+                Console.Error.WriteLine(error);
             }
         }
     }
