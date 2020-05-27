@@ -60,13 +60,13 @@ namespace YouTrackAnalyzer
                     .ToList();
 
                 var topHotTextBuilder = new TextBuilder();
-                var dexpTopHotIssues = dexpHotIssues.Take(5);
+                var dexpTopHotIssues = dexpHotIssues.Take(ourConfig.HotIssuesAmount);
 
                 var dexpHotAggregated = Aggregate(dexpHotIssues);
                 var dexpTopAggregated = AggregateTop(dexpTopHotIssues);
                 sw.Stop();
                 textBuilder.AppendHeader("DEXP HOT (" + dexpHotIssues.Count + ")");
-                var maxCount = dexpHotIssues.Count >= 5 ? 5 : dexpHotIssues.Count;
+                var maxCount = dexpHotIssues.Count >= ourConfig.HotIssuesAmount ? ourConfig.HotIssuesAmount : dexpHotIssues.Count;
                 topHotTextBuilder.AppendHeader($"Top {maxCount} of {dexpHotIssues.Count} hot issues");
 
                 textBuilder.AppendLine(dexpHotAggregated.ToPlainText(), dexpHotAggregated.ToHtml());

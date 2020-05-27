@@ -13,6 +13,9 @@ namespace YouTrackAnalyzer
         [Option('s', "search", Default = "", HelpText = "Optional search condition.")]
         public string SearchCondition { get; set; }
         
+        [Option('h', "hotCount", Default = 5, HelpText = "Amount of issues for slack summary.")]
+        public int HotIssuesAmount { get; set; }
+
         public readonly string HostUrl = "https://youtrack.jetbrains.com/";
     }
 }
