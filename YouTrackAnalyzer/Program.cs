@@ -78,7 +78,8 @@ namespace YouTrackAnalyzer
 
                 File.WriteAllText("report.html", textBuilder.ToHtml());
                 File.WriteAllText("report.txt", textBuilder.ToPlainText());
-                //File.WriteAllText("top-report.txt", topHotTextBuilder.ToPlainText());
+
+                Console.WriteLine(topHotTextBuilder.ToPlainText());
                 using (var writer = new TeamCityServiceMessages().CreateWriter(Console.WriteLine))
                 {
                     writer.WriteBuildParameter("env.short_report", topHotTextBuilder.ToPlainText());
