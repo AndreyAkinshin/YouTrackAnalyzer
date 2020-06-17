@@ -59,6 +59,16 @@ namespace YouTrackAnalyzer
                     .Where(it => it.Comments.Count > commentThreshold)
                     .ToList();
 
+                if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+                {
+                    var tasks = dexpHotIssues.Select(issue => issuesService.SetTag(issue, ourConfig.TagForHotIssues));
+                    //await Task.WhenAll(tasks); // not sure, if it is good idea to try to do it all at once
+                    foreach (var task in tasks)
+                    {
+                        await task;
+                    }
+                }
+
                 var topHotTextBuilder = new TextBuilder();
                 var dexpTopHotIssues = dexpHotIssues.Take(ourConfig.HotIssuesAmount);
 
@@ -92,6 +102,11 @@ namespace YouTrackAnalyzer
                 Console.WriteLine(e.Demystify());
                 Console.ResetColor();
             }
+        }
+
+        private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        {
+            return issuesService.ApplyCommand(issue.Id, $"tag {tagForHotIssues}");
         }
 
         private static TextBuilder Aggregate(IEnumerable<Issue> dexpHotIssues)
