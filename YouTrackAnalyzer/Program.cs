@@ -55,7 +55,7 @@ namespace YouTrackAnalyzer
                 }
 
                 var dexpHotIssues = list
-                    .Where(it => it.Comments.Count > commentThreshold || it.GetField("created").AsDateTime() > DateTime.Now - TimeSpan.FromDays(30) &&  it.Comments.Count > commentThreshold / 2)
+                    .Where(it => it.Comments.Count > commentThreshold || it.GetField("created").AsDateTime() > DateTime.Now - TimeSpan.FromDays(15) &&  it.Comments.Count > commentThreshold / 2)
                     .OrderByDescending(it => it.Comments.Count)
                     .ToList();
 
