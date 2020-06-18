@@ -38,7 +38,10 @@ namespace YouTrackAnalyzer
 
                 var sw = Stopwatch.StartNew();
                 
-                var issuesService = connection.CreateIssuesService(); 
+                var issuesService = connection.CreateIssuesService();
+
+                await RemoveTags(issuesService);
+
                 var list = new List<Issue>();
                 for (int i = 0; i < 20; i++)
                 {
@@ -105,6 +108,28 @@ namespace YouTrackAnalyzer
                 Console.WriteLine(e.Demystify());
                 Console.ResetColor();
             }
+        }
+
+        private static async Task RemoveTags(IIssuesService issuesService)
+        {
+            if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+            {
+                var taggedIssues = await issuesService.GetIssuesInProject("DEXP", $"tag: {ourConfig.TagForHotIssues}", take:100);
+                
+                Console.WriteLine($"Removing tags {ourConfig.TagForHotIssues} from {taggedIssues.Count} issues");
+                foreach (var issue in taggedIssues)
+                {
+                    Console.Write(".");
+                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+                }
+
+                Console.WriteLine("Finished.");
+            }
+        }
+
+        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        {
+            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : true);
         }
 
         private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
