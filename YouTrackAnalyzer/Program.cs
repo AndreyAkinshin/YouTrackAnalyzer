@@ -55,18 +55,21 @@ namespace YouTrackAnalyzer
                 }
 
                 var dexpHotIssues = list
+                    .Where(it => it.Comments.Count > commentThreshold || it.GetField("created").AsDateTime() > DateTime.Now - TimeSpan.FromDays(30) &&  it.Comments.Count > commentThreshold / 2)
                     .OrderByDescending(it => it.Comments.Count)
-                    .Where(it => it.Comments.Count > commentThreshold)
                     .ToList();
 
                 if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
                 {
                     var tasks = dexpHotIssues.Select(issue => issuesService.SetTag(issue, ourConfig.TagForHotIssues));
-                    //await Task.WhenAll(tasks); // not sure, if it is good idea to try to do it all at once
+                    //await Task.WhenAll(tasks); // too many network requests simultaneously would fail
+                    Console.WriteLine($"Setting tags {ourConfig.TagForHotIssues}");
                     foreach (var task in tasks)
                     {
+                        Console.Write(".");
                         await task;
                     }
+                    Console.WriteLine("Finished.");
                 }
 
                 var topHotTextBuilder = new TextBuilder();
@@ -86,8 +89,8 @@ namespace YouTrackAnalyzer
                 textBuilder.AppendKeyValue("dexpHotIssues.Count", dexpHotIssues.Count.ToString());
                 topHotTextBuilder.AppendLine(dexpTopAggregated, dexpTopAggregated);
 
-                File.WriteAllText("report.html", textBuilder.ToHtml());
-                File.WriteAllText("report.txt", textBuilder.ToPlainText());
+                await File.WriteAllTextAsync("report.html", textBuilder.ToHtml());
+                await File.WriteAllTextAsync("report.txt", textBuilder.ToPlainText());
 
                 Console.WriteLine(topHotTextBuilder.ToPlainText());
                 using (var writer = new TeamCityServiceMessages().CreateWriter(Console.WriteLine))
@@ -106,7 +109,7 @@ namespace YouTrackAnalyzer
 
         private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
         {
-            return issuesService.ApplyCommand(issue.Id, $"tag {tagForHotIssues}");
+            return issuesService.ApplyCommand(issue.Id, $"tag {tagForHotIssues}", disableNotifications : true);
         }
 
         private static TextBuilder Aggregate(IEnumerable<Issue> dexpHotIssues)
