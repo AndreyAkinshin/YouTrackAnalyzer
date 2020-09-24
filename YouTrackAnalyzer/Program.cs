@@ -39,8 +39,12 @@ namespace YouTrackAnalyzer
                 var sw = Stopwatch.StartNew();
                 
                 var issuesService = connection.CreateIssuesService();
-
-                await RemoveTags(issuesService);
+                
+                var taggedIssues = new List<Issue>();
+                if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+                {
+                    taggedIssues.AddRange( await issuesService.GetIssues($"tag: {ourConfig.TagForHotIssues}", take:100));
+                }
 
                 var list = new List<Issue>();
                 for (int i = 0; i < 20; i++)
@@ -56,6 +60,8 @@ namespace YouTrackAnalyzer
                         Console.Error.WriteLine(e);
                     }
                 }
+                
+                await RemoveTags(taggedIssues, list, issuesService);
 
                 var dexpHotIssues = list
                     .Where(it => it.Comments.Count > commentThreshold || it.GetField("created").AsDateTime() > DateTime.Now - TimeSpan.FromDays(15) &&  it.Comments.Count > commentThreshold / 2)
@@ -110,21 +116,16 @@ namespace YouTrackAnalyzer
             }
         }
 
-        private static async Task RemoveTags(IIssuesService issuesService)
+        private static async Task RemoveTags(List<Issue> taggedIssues, List<Issue> list, IIssuesService issuesService)
         {
-            if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+            Console.WriteLine($"Removing tags {ourConfig.TagForHotIssues} from {taggedIssues.Count} issues");
+            foreach (var issue in taggedIssues.Where(issue1 => !list.Contains(issue1)))
             {
-                var taggedIssues = await issuesService.GetIssuesInProject("DEXP", $"tag: {ourConfig.TagForHotIssues}", take:100);
-                
-                Console.WriteLine($"Removing tags {ourConfig.TagForHotIssues} from {taggedIssues.Count} issues");
-                foreach (var issue in taggedIssues)
-                {
-                    Console.Write(".");
-                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
-                }
-
-                Console.WriteLine("Finished.");
+                Console.Write(".");
+                await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
             }
+
+            Console.WriteLine("Finished.");
         }
 
         private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
