@@ -38,7 +38,14 @@ namespace YouTrackAnalyzer
 
                 var sw = Stopwatch.StartNew();
                 
-                var issuesService = connection.CreateIssuesService(); 
+                var issuesService = connection.CreateIssuesService();
+                
+                var taggedIssues = new List<Issue>();
+                if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+                {
+                    taggedIssues.AddRange( await issuesService.GetIssues($"tag: {ourConfig.TagForHotIssues}", take:100));
+                }
+
                 var list = new List<Issue>();
                 for (int i = 0; i < 20; i++)
                 {
@@ -53,11 +60,26 @@ namespace YouTrackAnalyzer
                         Console.Error.WriteLine(e);
                     }
                 }
+                
+                await RemoveTags(taggedIssues, list, issuesService);
 
                 var dexpHotIssues = list
+                    .Where(it => it.Comments.Count > commentThreshold || it.GetField("created").AsDateTime() > DateTime.Now - TimeSpan.FromDays(15) &&  it.Comments.Count > commentThreshold / 2)
                     .OrderByDescending(it => it.Comments.Count)
-                    .Where(it => it.Comments.Count > commentThreshold)
                     .ToList();
+
+                if (!string.IsNullOrEmpty(ourConfig.TagForHotIssues))
+                {
+                    var tasks = dexpHotIssues.Select(issue => issuesService.SetTag(issue, ourConfig.TagForHotIssues));
+                    //await Task.WhenAll(tasks); // too many network requests simultaneously would fail
+                    Console.WriteLine($"Setting tags {ourConfig.TagForHotIssues}");
+                    foreach (var task in tasks)
+                    {
+                        Console.Write(".");
+                        await task;
+                    }
+                    Console.WriteLine("Finished.");
+                }
 
                 var topHotTextBuilder = new TextBuilder();
                 var dexpTopHotIssues = dexpHotIssues.Take(ourConfig.HotIssuesAmount);
@@ -76,9 +98,10 @@ namespace YouTrackAnalyzer
                 textBuilder.AppendKeyValue("dexpHotIssues.Count", dexpHotIssues.Count.ToString());
                 topHotTextBuilder.AppendLine(dexpTopAggregated, dexpTopAggregated);
 
-                File.WriteAllText("report.html", textBuilder.ToHtml());
-                File.WriteAllText("report.txt", textBuilder.ToPlainText());
-                //File.WriteAllText("top-report.txt", topHotTextBuilder.ToPlainText());
+                await File.WriteAllTextAsync("report.html", textBuilder.ToHtml());
+                await File.WriteAllTextAsync("report.txt", textBuilder.ToPlainText());
+
+                Console.WriteLine(topHotTextBuilder.ToPlainText());
                 using (var writer = new TeamCityServiceMessages().CreateWriter(Console.WriteLine))
                 {
                     writer.WriteBuildParameter("env.short_report", topHotTextBuilder.ToPlainText());
@@ -91,6 +114,28 @@ namespace YouTrackAnalyzer
                 Console.WriteLine(e.Demystify());
                 Console.ResetColor();
             }
+        }
+
+        private static async Task RemoveTags(List<Issue> taggedIssues, List<Issue> list, IIssuesService issuesService)
+        {
+            Console.WriteLine($"Removing tags {ourConfig.TagForHotIssues} from {taggedIssues.Count} issues");
+            foreach (var issue in taggedIssues.Where(issue1 => !list.Contains(issue1)))
+            {
+                Console.Write(".");
+                await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+            }
+
+            Console.WriteLine("Finished.");
+        }
+
+        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        {
+            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : true);
+        }
+
+        private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        {
+            return issuesService.ApplyCommand(issue.Id, $"tag {tagForHotIssues}", disableNotifications : true);
         }
 
         private static TextBuilder Aggregate(IEnumerable<Issue> dexpHotIssues)
