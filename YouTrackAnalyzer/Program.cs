@@ -49,18 +49,12 @@ namespace YouTrackAnalyzer
                 var list = new List<Issue>();
                 for (int i = 0; i < 20; i++)
                 {
-                    try
-                    {
-                        var dexpIssues = await issuesService.GetIssuesInProject(
-                            "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", skip: i*100,take: 100, updatedAfter: DateTime.Now - TimeThreshold);
-                        list.AddRange(dexpIssues);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.Error.WriteLine(e);
-                    }
+                    var dexpIssues = await issuesService.GetIssuesInProject(
+                        "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", skip: i * 100, take: 100,
+                        updatedAfter: DateTime.Now - TimeThreshold);
+                    list.AddRange(dexpIssues);
                 }
-                
+
                 await RemoveTags(taggedIssues, list, issuesService);
 
                 var dexpHotIssues = list
