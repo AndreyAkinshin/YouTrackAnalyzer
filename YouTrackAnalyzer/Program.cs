@@ -11,7 +11,9 @@ using CommandLine;
 using Humanizer;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using YouTrackSharp;
+using YouTrackSharp.Generated;
 using YouTrackSharp.Issues;
+using Issue = YouTrackSharp.Issues.Issue;
 
 namespace YouTrackAnalyzer
 {
@@ -120,19 +122,22 @@ namespace YouTrackAnalyzer
                 {
                     await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
                 }
-                catch (Exception)
+                catch (YouTrackErrorException)
                 {
                     Console.WriteLine($"Failed to remove tag silently ${ourConfig.TagForHotIssues} from ${issue.Id}");
-                    throw;
+                }
+                finally
+                {
+                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues, false);
                 }
             }
 
             Console.WriteLine("Finished.");
         }
 
-        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues, bool disableNotifications = true)
         {
-            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : true);
+            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : disableNotifications);
         }
 
         private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
