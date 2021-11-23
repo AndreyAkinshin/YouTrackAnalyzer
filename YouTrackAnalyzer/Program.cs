@@ -116,7 +116,15 @@ namespace YouTrackAnalyzer
             foreach (var issue in taggedIssues.Where(issue1 => !list.Contains(issue1)))
             {
                 Console.Write(".");
-                await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+                try
+                {
+                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"Failed to remove tag silently ${ourConfig.TagForHotIssues} from ${issue.Id}");
+                    throw;
+                }
             }
 
             Console.WriteLine("Finished.");
