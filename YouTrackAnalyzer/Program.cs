@@ -125,9 +125,6 @@ namespace YouTrackAnalyzer
                 catch (YouTrackErrorException)
                 {
                     Console.WriteLine($"Failed to remove tag silently ${ourConfig.TagForHotIssues} from ${issue.Id}");
-                }
-                finally
-                {
                     await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues, false);
                 }
             }
