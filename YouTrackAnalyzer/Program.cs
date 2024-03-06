@@ -11,7 +11,9 @@ using CommandLine;
 using Humanizer;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using YouTrackSharp;
+using YouTrackSharp.Generated;
 using YouTrackSharp.Issues;
+using Issue = YouTrackSharp.Issues.Issue;
 
 namespace YouTrackAnalyzer
 {
@@ -49,18 +51,12 @@ namespace YouTrackAnalyzer
                 var list = new List<Issue>();
                 for (int i = 0; i < 20; i++)
                 {
-                    try
-                    {
-                        var dexpIssues = await issuesService.GetIssuesInProject(
-                            "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", skip: i*100,take: 100, updatedAfter: DateTime.Now - TimeThreshold);
-                        list.AddRange(dexpIssues);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.Error.WriteLine(e);
-                    }
+                    var dexpIssues = await issuesService.GetIssuesInProject(
+                        "DEXP", $"{SearchFiler} {ourConfig.SearchCondition}", skip: i * 100, take: 100,
+                        updatedAfter: DateTime.Now - TimeThreshold);
+                    list.AddRange(dexpIssues);
                 }
-                
+
                 await RemoveTags(taggedIssues, list, issuesService);
 
                 var dexpHotIssues = list
@@ -122,15 +118,23 @@ namespace YouTrackAnalyzer
             foreach (var issue in taggedIssues.Where(issue1 => !list.Contains(issue1)))
             {
                 Console.Write(".");
-                await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+                try
+                {
+                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues);
+                }
+                catch (YouTrackErrorException)
+                {
+                    Console.WriteLine($"Failed to remove tag silently ${ourConfig.TagForHotIssues} from ${issue.Id}");
+                    await issuesService.RemoveTag(issue, ourConfig.TagForHotIssues, false);
+                }
             }
 
             Console.WriteLine("Finished.");
         }
 
-        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
+        private static Task RemoveTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues, bool disableNotifications = true)
         {
-            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : true);
+            return issuesService.ApplyCommand(issue.Id, $"remove tag {tagForHotIssues}", disableNotifications : disableNotifications);
         }
 
         private static Task SetTag(this IIssuesService issuesService, Issue issue, string tagForHotIssues)
@@ -167,7 +171,8 @@ namespace YouTrackAnalyzer
                 var title = issue.Summary.Truncate(80, "...").Replace("<", "&lt;").Replace(">", "&gt;")
                   .Replace("“", "'").Replace("”", "'").Replace("\"", "'").Replace("\"", "'")
                   .Replace("\'", String.Empty)
-                  .Replace(@"\", "/");
+                  .Replace(@"\", "/")
+                  .Replace("$", "&#36;");
                 title = HttpUtility.JavaScriptStringEncode(title);
                 title = Regex.Replace(title, @"[^\u0000-\u007F]+", string.Empty);
                 var comments = "comment".ToQuantity(issue.Comments.Count);
